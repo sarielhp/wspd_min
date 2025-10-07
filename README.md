@@ -25,3 +25,12 @@ Run
 > examples/wspd_1_dim.jl 1dim
 
 From the "root" directory of the project.
+
+This should create a figure out/1_dim.pdf
+
+# System
+
+I assume you use linux. If you use windows, install wsl, and use
+linux. If you use mac you are on your own.
+
+

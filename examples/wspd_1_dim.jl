@@ -519,7 +519,7 @@ function one_dim_comp_solution(; ε = 1.0, n = 80 )
 
     #####################################################################
     # Drawing stuff... 
-    c,cr,bb_draw = cairo_setup( "test.pdf", Point2F( n+1, n+1 ) )
+    c,cr,bb_draw = cairo_setup( "out/1_dim.pdf", Point2F( n+1, n+1 ) )
     flip_y_axis( cr, n+1 )
 
     str = @sprintf( "WSPD cover\nn = %d\nε = %g\nN = %d  (# of grid points)\n|WSPD| = %d\n",
