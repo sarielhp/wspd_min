@@ -1,0 +1,21 @@
+#! /bin/bash
+
+find data/sigspatial/ -type f -iname "file-*.dat" > list.txt
+
+mkdir -p out/
+
+while IFS= read -r file_path; do
+  # Skip empty lines
+  if [ -z "$file_path" ]; then
+    continue
+  fi
+  echo $file_path
+  file_basename=$(basename "$file_path")
+#  if [[ "$file_basename" =~ ^[0-9] ]]; then
+      echo julia examples/shortcut.jl 0.1 $file_path
+      julia examples/shortcut.jl 0.1 $file_path
+      echo "done!"
+      new_filename="${file_basename%.txt}.pdf"
+      cp curves.pdf out/$new_filename
+#  fi
+done < list.txt
