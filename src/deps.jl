@@ -1,0 +1,25 @@
+#! /bin/env julial
+
+import Pkg;
+
+Pkg.activate( "." )
+#Pkg.add("Graphs")
+Pkg.add("Quickhull" )
+Pkg.add("PrettyTables")
+#Pkg.add("HiGHS")
+Pkg.add("Distances")
+Pkg.add("Cairo")
+Pkg.add("FrechetDist")
+Pkg.add("DataStructures")
+Pkg.add("Accessors")
+#Pkg.add("SimpleWeightedGraphs")
+Pkg.add("TimerOutputs")
+Pkg.add("FileIO")
+Pkg.add("Format")
+Pkg.add("DataFrames")
+Pkg.add("JuMP" )
+Pkg.add("Gurobi" )
+Pkg.add("Parameters")
+Pkg.add("Distributions")
+Pkg.add("Plots")
+Pkg.add("Colors")
