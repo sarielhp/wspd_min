@@ -28,9 +28,9 @@ From the "root" directory of the project.
 
 This should create a figure out/1_dim.pdf
 
-# System
+# System tested on...
 
-I assume you use linux. If you use windows, install wsl, and use
-linux. If you use mac you are on your own.
+I use linux. If you use windows, install wsl, and use linux. If you
+use mac you are on your own.
 
 
