@@ -1065,6 +1065,50 @@ function   draw_vicinity( filename = "out/vicinity.pdf", ε = 1.0 )
     println( "Created : ", fln ) 
 end
 
+
+function one_dim_example(; ε = 1.0, n = 80 )
+    
+    PS = Polygon2F()
+
+    p = Point2F( 0.3*n, 0.8*n )
+    k = 10
+    Δ = 0.06
+    for i ∈ 1:10
+        q = p + Point2F(+Δ, -Δ)
+        push!( PS, q )
+        p = q
+    end
+
+    B = Vector{BBox2F}()
+    for p ∈ PS
+        push!( B, sq_from_anchor( p, ε ) )        
+    end
+
+    C = Vector{BBox2F}()
+    for  sq ∈ B
+        push!(C, sq_from_top_right( bottom_left(sq ), ε ) )
+    end
+    Base.append!( B,C)
+        
+    
+    #####################################################################
+    # Drawing stuff... 
+    fln = "out/example.pdf"
+    c,cr,_ = cairo_setup( fln, Point2F( n+1, n+1 ) )
+    flip_y_axis( cr, n+1 )
+
+    # Draw the greedy solution
+    draw_cover( cr, Vector{Point2F}(), B, 0.1, false )    
+    Cairo.show_page( cr )
+    
+    Cairo.finish( c )
+
+    println( "Created : ", fln )
+end
+
+
+
+
 function (@main)(ARGS)    
     if length( ARGS ) > 0  &&  ARGS[1] == "1dim"
         one_dim_comp_solution( ε=0.9, n = 20 )
@@ -1073,6 +1117,11 @@ function (@main)(ARGS)
 
     if  ( length( ARGS ) > 0  &&  ARGS[1] == "union" )
         one_dim_union( ε=0.7123, n = 80 )
+        return
+    end
+
+    if  ( length( ARGS ) > 0  &&  ARGS[1] == "example" )
+        one_dim_example( ε=0.4, n = 80 )
         return
     end
 
