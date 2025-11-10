@@ -33,7 +33,10 @@ This should create a figure out/1_dim.pdf
 I use linux. If you use windows, install wsl, and use linux. If you
 use mac you are on your own.
 
+<<<<<<< HEAD
 # What are all the other programs in examples?
 
 I used this base code to implement other things for other projects. They are not directly relevant, or easily explainable at this stage.
 
+=======
+>>>>>>> f9e131185bb3a89efed44aaa9510846bff4e8278

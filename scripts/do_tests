@@ -1,0 +1,25 @@
+#! /bin/bash
+
+rm out/results.csv
+
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 10
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 20
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 30
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 40
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 50
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 60
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 70
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 80
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 90
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 100
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 120
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 140
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 160
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 180
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 200
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 250
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 300
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 350
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 400
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 450
+examples/wspd_1_dim.jl  1dim_eps_n 1.0 500

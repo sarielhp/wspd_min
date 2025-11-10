@@ -219,13 +219,20 @@ function  fill_bboxes( cr, boxes, scale = 1.0 )
         fill_bbox( cr, bb, scale );
     end
 end
-function  fill_bboxes_cycle_colors( cr, boxes, α = 1.0, scale = 1.0 )
+
+function  fill_bboxes_cycle_colors( cr, boxes; α = 1.0, scale = 1.0,
+    f_draw_frames = false
+)
     count = 0;
     for  bb ∈ boxes
         count += 1
         set_source_rgba( cr, get_color_rgb( count )..., α );
 
         fill_bbox( cr, bb, scale );
+        if  f_draw_frames
+            set_source_rgba( cr, get_color_rgb( count )..., 1.0 );
+            draw_bbox( cr, bb, scale );
+        end
     end
 end
 
@@ -1163,6 +1170,43 @@ function flip_y_axis(ctx::CairoContext, height::Real)
     Cairo.translate(ctx, -0.0, -height + 0.01)
 end
 
+function add_to_pdf_text( cr, n, text_to_write::String )
+    Cairo.save( cr )
+    flip_y_axis( cr, n+1 )
+
+    scale = n * 0.02 / 8.0
+    Cairo.scale(cr, scale, scale )
+    set_source_rgba( cr, 0.0, 0.0, 0.0, 1.0 )
+
+    
+    # Set the font properties
+    font_size = 14.0
+    Cairo.set_font_size(cr, font_size)
+
+    # Set the font face. You must have this font installed on your system.
+    # We will use "Serif" as a common fallback.
+    Cairo.select_font_face(cr, "Serif", Cairo.FONT_SLANT_NORMAL,
+        Cairo.FONT_WEIGHT_NORMAL)
+
+    # Split the input string by newline characters
+    lines = split(text_to_write, '\n')
+
+    # Define the starting position and line spacing
+    x_pos, y_pos = 10.0, 10.0
+    line_spacing = font_size * 1.5
+
+    # Iterate through each line and draw it
+    for line in lines
+        # Move to the position for the current line
+        Cairo.move_to(cr, x_pos, y_pos)
+        # Show the text
+        Cairo.show_text(cr, line)
+        # Increment the vertical position for the next line
+        y_pos += line_spacing
+    end
+    Cairo.show_page( cr )
+    Cairo.restore( cr )
+end
 
 
 # ????
