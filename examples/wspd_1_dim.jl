@@ -13,6 +13,7 @@ using Printf
 using DataFrames
 using PrettyTables
 using Random
+using CSV
 
 using JuMP, Gurobi
 #using HiGHS, GLPK, JuMP, Gurobi
@@ -254,7 +255,7 @@ Sets whether a specific item is in a specific set within the SetSystem
 using the `ss[set_index, item_index] = value` syntax.
 
 # Arguments
-- `ss::SetSystem`: The SetSystem instance to modify.
+- `ss::SetSystem`: The SetSystem instance to modelify.
 - `value::Bool`: A boolean value. If `true`, the item is added. If `false`, it is removed.
 - `set_index::Int`: The index of the set to modify (1-based).
 - `item_index::Int`: The index of the item to add or remove (1-based).
@@ -367,11 +368,12 @@ function  compute_all_anchor_boxes( PS::Vector{Point2F}, ε )
     return  [sq_from_anchor( p, ε ) for p ∈ PS]
 end
 
+
 function  compute_set_system( PS::Vector{Point2F}, B::Vector{BBox2F} )
     ss = SetSystem( length( PS ), length( B ) )
     for i ∈ 1:length( PS )
         for  set ∈ 1:length( B )
-            if  ( PS[ i ] ∈ B[ set ] )
+            if  ( PS[ i ] ∈  B[ set ] )
                 ss[ set, i ] = true
             end
         end
@@ -379,7 +381,6 @@ function  compute_set_system( PS::Vector{Point2F}, B::Vector{BBox2F} )
 
     return  ss
 end
-
 
 function  greedy_cover( PS::Vector{Point2F}, ε )
     B = compute_all_anchor_boxes( PS, ε )
@@ -468,8 +469,8 @@ function  WSPD_cover( P::Polygon1F, ε )
         #bbox.expand( bb, 0.0001 )
 
         count += 1
-        println( count, " : " )
-        println( bb )
+        #println( count, " : " )
+        #println( bb )
         push!( boxes, bb )
     end
     return  boxes
@@ -526,6 +527,10 @@ function compute_opt_cover_ip( PS, ε )
     #model = Model(HiGHS.Optimizer)
     #model = Model(HiGHS.Optimizer)
 
+    set_time_limit_sec(model, 240.0 )
+    set_optimizer_attribute(model, "Threads", 10)
+    set_optimizer_attribute(model, "Presolve", 0)
+    
     # Verify set system
     for e in 1:items
         for s in 1:sets
@@ -557,6 +562,7 @@ function compute_opt_cover_ip( PS, ε )
     optimize!(model)
 
     # Check the status of the solution.
+    local  optimal_sets
     if termination_status(model) == MOI.OPTIMAL
         println("Optimal solution found.")
 
@@ -567,9 +573,15 @@ function compute_opt_cover_ip( PS, ε )
         optimal_sets = [s for s in 1:sets if value(x[s]) > 0.5]
         println("Sets in the optimal cover: ", optimal_sets)
     else
+        optimal_sets = [s for s in 1:sets if value(x[s]) > 0.5]
         println("No optimal solution found. Termination status: ", termination_status(model))
     end
-    return  [B[s] for s ∈ optimal_sets ]
+    println( "\n\n" )
+    println( "Objective value : ", objective_value(model) )
+    println( "Lower     bound : ", objective_bound(model) )
+    lb = objective_bound(model)
+
+    return  [B[s] for s ∈ optimal_sets ], round( Int, lb )
 end
 
 
@@ -758,8 +770,12 @@ Decompose a set of shadow squares into disjoint rectangles. It is
 *important* that these are shadow squares, as the logic works only for
 them.
 """
-function   compute_disjoint_union( shadow_squares )
-    B = sort( shadow_squares, by=b -> -energy( b ) )
+function   compute_disjoint_union( shadow_squares; f_random )
+    if  f_random
+        B = shuffle( shadow_squares )
+    else
+        B = sort( shadow_squares, by=b -> -energy( b ) )
+    end
     rects_out = Vector{BBox2F}()
     handled = Vector{BBox2F}()
 
@@ -791,7 +807,52 @@ function  random_anchored_squares( n, N, ε )
     return  B, AN
 end
 
-function one_dim_comp_solution( ε = 1.0, n = 80 )
+
+function  df_load( FILE_PATH::String )
+    
+    col_defs = [
+        :n => Int[],
+        :N => Int[],
+        :eps => Float64[],
+        :IP => Int[],
+        :IPLB => Int[],
+        :Greedy => Int[],
+        :WSPD => Int[],
+        :Approx3 => Int[],
+        :Approx3C => Int[]
+    ]
+    local  df
+    if isfile(FILE_PATH)
+        println("File found. Loading data from ", FILE_PATH, "...")
+        df = CSV.read(FILE_PATH, DataFrame)
+    else
+        println("File not found. Creating new empty DataFrame...")
+        # Create a new, empty DataFrame from our definitions
+        df = DataFrame(col_defs)
+    end
+    return  df
+end
+
+function  verify_solution( PS, cover )
+    for  p ∈ PS
+        f_found = false
+        for  b ∈ cover
+            if  p ∈ b
+                f_found = true
+                break;
+            end
+        end
+        if  ! f_found
+            println( "p : ", p )
+            error( "Point is not covered!" )
+        end
+    end
+    println( "Solution verified!" )
+end
+
+function one_dim_comp_solution( ε, n, filename::String  )
+    n_draw_limit = 81
+    
     P = Polygon1F()
     for i ∈ 1:n
         push!( P, Point1F( i ) )
@@ -800,45 +861,61 @@ function one_dim_comp_solution( ε = 1.0, n = 80 )
     # Generate the upper grid 
     PS = lift_to_2d( P )
 
+    println( "Computing WSPD cover..." )
     cover_wspd = WSPD_cover( P, ε )
+    println( "Computing 3-approx-cover..." )
     cover_3_aprx = create_cover_3_approx( PS, ε )
+    println( "Computing greedy cover..." )
     cover_greedy = greedy_cover( PS, ε )
 
+    println( "Computing cleanup of the 3-approx cover..." )
     cover_3_aprx_c = cleanup_cover( PS, cover_3_aprx )
 
     println( "Running IP solver..." )
-    cover_ip = compute_opt_cover_ip( PS, ε ) 
+    cover_ip, ip_lb = compute_opt_cover_ip( PS, ε ) 
 
+    println( "Verifying IP solution..." )
+    verify_solution( PS, cover_ip )
+
+    
     N = length( PS )
 
     println( "n = ", n, " N = ", N )
-    println( "WSPD        : ", length( cover_wspd ) )
-    println( "3-approx    : ", length( cover_3_aprx ) )
-    println( "3-approx(c) : ", length( cover_3_aprx_c ) )
-    println( "Greedy      : ", length( cover_greedy ) )
-    println( "IP          : ", length( cover_ip ) )
+    println( "WSPD              : ", length( cover_wspd ) )
+    println( "3-approx          : ", length( cover_3_aprx ) )
+    println( "3-approx(c)       : ", length( cover_3_aprx_c ) )
+    println( "Greedy            : ", length( cover_greedy ) )
+    println( "IP                : ", length( cover_ip ) )
+    println( "IP (lower bound ) : ", ip_lb )
 
     #####################################################################
     # Drawing stuff... 
-    c,cr,bb_draw = cairo_setup( "out/1_dim.pdf", Point2F( n+1, n+1 ) )
+
+    pdf_filename = ( "out/1_dim_" * "n" * string(n) * "_eps_" * replace( string(ε), "." => "_" )
+                 * ".pdf" )
+    c,cr,bb_draw = cairo_setup( pdf_filename, Point2F( n+1, n+1 ) )
     flip_y_axis( cr, n+1 )
 
     str = @sprintf( "WSPD cover\nn = %d\nε = %g\nN = %d  (# of grid points)\n|WSPD| = %d\n",
                       n, ε, N, length( cover_wspd ) )
     add_to_pdf_text( cr, n, str )
     Cairo.show_page( cr )
-    
-    draw_cover( cr, PS, cover_wspd )
-    Cairo.show_page( cr )
+
+    if  ( n < n_draw_limit )
+        draw_cover( cr, PS, cover_wspd )
+        Cairo.show_page( cr )
+    end
 
     ##########################################################
     str = @sprintf( "3 approx cover\nn = %d\n|3-approx| = %d\n",
                       n,  length( cover_3_aprx ) )
     add_to_pdf_text( cr, n, str )
 
-    draw_cover( cr, PS, cover_3_aprx )
-    Cairo.show_page( cr )
-
+    if  ( n < n_draw_limit )
+        draw_cover( cr, PS, cover_3_aprx )
+        Cairo.show_page( cr )
+    end
+    
     ##########################################################
     str = @sprintf( "3 approx cover (clean)\nn = %d\n|3-approx-clean| = %d\n%s",
         n,  length( cover_3_aprx_c ),
@@ -858,9 +935,10 @@ function one_dim_comp_solution( ε = 1.0, n = 80 )
     add_to_pdf_text( cr, n, str )
     Cairo.show_page( cr )
 
-    draw_cover( cr, PS, cover_greedy )
-    Cairo.show_page( cr )
-
+    if  ( n < n_draw_limit )
+        draw_cover( cr, PS, cover_greedy )
+        Cairo.show_page( cr )
+    end
     ##########################################################
     str = @sprintf( "IP cover\nn = %d\nε = %g\n|IP| = %d\n%s",
         n, ε, length( cover_ip ),
@@ -869,9 +947,10 @@ function one_dim_comp_solution( ε = 1.0, n = 80 )
     add_to_pdf_text( cr, n, str )
     Cairo.show_page( cr )
 
-    draw_cover( cr, PS, cover_ip )
-    Cairo.show_page( cr )
-
+    if  ( n < n_draw_limit )
+        draw_cover( cr, PS, cover_ip )
+        Cairo.show_page( cr )
+    end
     ##########################################################
     str = @sprintf( "Summary\nn = %d    (N=%d)\nε = %g\n",
         n, N, ε )
@@ -886,7 +965,30 @@ function one_dim_comp_solution( ε = 1.0, n = 80 )
 
     ##########################################################
     Cairo.finish( c )
+
+
+    new_row_data = (
+        n,     # n
+        N,    # N
+        ε,     # eps
+        length( cover_ip ),   # IP
+        ip_lb,                # IP LB
+        length( cover_greedy ),   # Greedy
+        length( cover_wspd ),     # WSPD
+        length( cover_3_aprx ),    # 3-approx
+        length( cover_3_aprx_c )  # 3-approx-c
+    )
+
+    df = df_load( filename )
+    push!( df, new_row_data )
+    CSV.write( filename, df)
+
+    println( "\n" )
+    println( "Created: ", pdf_filename )
+    println( "Updated: ", filename )
+    println( "\n" )    
 end
+
 
 function  draw_diagonal( cr, n )
     set_line_width(cr, 1.0)
@@ -925,9 +1027,11 @@ function one_dim_union(; ε = 1.0, n = 80 )
                       n, ε, N, length( cover_greedy ) )
     add_to_pdf_text( cr, n, str )
 
-    draw_cover( cr, PS, cover_greedy, 0.1, false )    
-
-    Cairo.show_page( cr )
+    if  ( n < n_draw_limit )
+        draw_cover( cr, PS, cover_greedy, 0.1, false )    
+        Cairo.show_page( cr )
+    end
+    
 
     println( "A" );
     ####################################################################
@@ -942,7 +1046,8 @@ function one_dim_union(; ε = 1.0, n = 80 )
     println( "B" );
 
     # Now compute the union
-    rects_greedy = compute_disjoint_union( cover_greedy )
+    rects_greedy = compute_disjoint_union( cover_greedy, f_random=false )
+    rects_greedy = cleanup_cover( PS, rects_greedy )
     str = @sprintf( "%s%d ==> %d   (WSPD solution size: %d\n",
                     "Greedy solution broken into disjoint rectangles\n",
         length( cover_greedy),  length( rects_greedy  ),
@@ -952,9 +1057,34 @@ function one_dim_union(; ε = 1.0, n = 80 )
 
     println( "C" );
     #draw_cover( cr, Vector{Point2F}(), rects_greedy, 0.0, false )
-    draw_cover( cr, PS, rects_greedy, 0.1, false )
-    Cairo.show_page( cr )
+
+    if  ( n < n_draw_limit )
+        draw_cover( cr, PS, rects_greedy, 0.1, false )
+        Cairo.show_page( cr )
+    end
     
+    ########################################################################
+    # Now compute the union but use random permtuation
+    cover_2 = deepcopy( cover_greedy )
+    shuffle!( cover_2 )
+    rects_2 = compute_disjoint_union( cover_2, f_random = true )
+    rects_2 = cleanup_cover( PS, rects_2 )
+
+    str = @sprintf( "%s%d ==> %d (det: %d)   (WSPD solution size: %d\n",
+        "Greedy solution broken into disjoint rectangles\n" *
+        "using random permutation.\n",
+        length( cover_2),  length( rects_2  ),
+        length( rects_greedy ),
+        length( cover_wspd )
+    )
+    add_to_pdf_text( cr, n, str )
+
+    println( "C" );
+    #draw_cover( cr, Vector{Point2F}(), rects_greedy, 0.0, false )
+    if  ( n < n_draw_limit )
+        draw_cover( cr, PS, rects_greedy, 0.1, false )
+        Cairo.show_page( cr )
+    end
 
     
     ###############################################################
@@ -980,7 +1110,7 @@ function one_dim_union(; ε = 1.0, n = 80 )
     ###############################################################
 
     println( "G:", length( B ) );
-    rects = compute_disjoint_union( B )
+    rects = compute_disjoint_union( B, f_random = false )
     str = @sprintf( "%s\n %d ==>  = %d\n",
                     "Random collection of shadowed squares as disjoint union\n",
                      length( B), length( rects ) )
@@ -997,8 +1127,22 @@ end
 #########################################################################
 
 
+#=
+function  df_push(  df, 
+new_row_data = (
+    100,     # n
+    1000,    # N
+    0.1,     # eps
+    12.34,   # IP
+    15.01,   # Greedy
+    8.4,     # WSPD
+    14.5,    # 3-approx
+    14.2     # 3-approx-c
+)
+end 
+=#
 
-    
+
 function  draw_vicinity_point( cr, p, ε )
     PS = Vector{Point2F}()
     push!( PS, p )
@@ -1106,17 +1250,30 @@ function one_dim_example(; ε = 1.0, n = 80 )
     println( "Created : ", fln )
 end
 
-
+function str2num(T::Type{<:Number}, str)
+    val = tryparse(T, str )
+    if  val == nothing
+        println( "String : [", str, "]" );            
+        error( "Failed to parse" )
+    end
+    return  T( val )
+end
 
 
 function (@main)(ARGS)    
     if length( ARGS ) > 0  &&  ARGS[1] == "1dim"
-        one_dim_comp_solution( ε=0.9, n = 20 )
+        one_dim_comp_solution( 0.9, 20 )
+        return
+    end
+
+    if ( length( ARGS ) == 3 )   &&  ( ARGS[1] == "1dim_eps_n" )       
+        one_dim_comp_solution( str2num(Float64,ARGS[2]), str2num(Int, ARGS[3] ),
+                               "out/results.csv" )
         return
     end
 
     if  ( length( ARGS ) > 0  &&  ARGS[1] == "union" )
-        one_dim_union( ε=0.7123, n = 80 )
+        one_dim_union( 0.7123, 40 )
         return
     end
 
