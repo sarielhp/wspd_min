@@ -12,7 +12,7 @@ using VirtArray
 using Printf
 using DataFrames
 using PrettyTables
-using Random
+using Random, Distributions
 using CSV
 
 using JuMP, Gurobi
@@ -951,7 +951,28 @@ function  verify_solution( PS, cover )
     printlnf( "Solution verified!" )
 end
 
-@enum InputType Uniform RandomUniform
+
+function generate_n_samples_normal( n::Int )
+    if n <= 0
+        return Float64[]
+    end
+    
+    # 1. Generate n numbers from the normal distribution
+    dist = Normal(0.0, 1.0)
+    numbers = rand(dist, n)
+    sort!(numbers)
+    
+    numbers = numbers .- numbers[1]
+    scale = (n-1) / maximum( numbers ) 
+    numbers = numbers .* scale
+    numbers = numbers .+ 1.0
+    
+    return numbers
+end
+
+
+
+@enum InputType Uniform RandomUniform RandomNormal
 
 function one_dim_comp_solution( ε, n, filename::String, typ::InputType  )
     n_draw_limit = 81
@@ -971,6 +992,13 @@ function one_dim_comp_solution( ε, n, filename::String, typ::InputType  )
             push!( P, Point1F( vals[ i ] ) )
         end
         suffix = "urand"
+    end
+    if  ( typ == RandomNormal )
+        vals = generate_n_samples_normal( n )
+        for i ∈ 1:n
+            push!( P, Point1F( vals[ i ] ) )
+        end
+        suffix = "normal"
     end
     
     
@@ -1413,7 +1441,7 @@ function (@main)(ARGS)
 
     if ( length( ARGS ) == 3 )   &&  ( ARGS[1] == "1dim_eps_n" )       
         one_dim_comp_solution( str2num(Float64,ARGS[2]), str2num(Int, ARGS[3] ),
-                               "results", RandomUniform )
+                               "results", RandomNormal )
         return
     end
 
