@@ -1,5 +1,8 @@
 #! /bin/bash
 
+rm -r -f out/ >& /dev/null
+mkdir out
+
 rm out/results.csv
 
 examples/wspd_1_dim.jl  1dim_eps_n 1.0 10
