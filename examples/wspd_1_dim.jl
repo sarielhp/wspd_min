@@ -507,8 +507,8 @@ function  WSPD_cover( P::Polygon1F, ε )
             @assert( first( L ) <= last( L ) < first( R) <= last( R ) )
         end
         γ = 0.0001
-        p_l = Point2F( first( L )-γ, first( R )-γ )
-        p_r = Point2F( last( L ) + γ, last( R ) + γ )
+        p_l = Point2F( P[first( L )][1]-γ, P[first( R )][1]-γ )
+        p_r = Point2F( P[last( L )][1] + γ, P[last( R )][1] + γ )
         bb = BBox2F_init( p_l, p_r )
         #bbox.expand( bb, 0.0001 )
 
@@ -951,17 +951,30 @@ function  verify_solution( PS, cover )
     printlnf( "Solution verified!" )
 end
 
-function one_dim_comp_solution( ε, n, filename::String  )
+@enum InputType Uniform RandomUniform
+
+function one_dim_comp_solution( ε, n, filename::String, typ::InputType  )
     n_draw_limit = 81
     
     P = Polygon1F()
-    for i ∈ 1:n
-        push!( P, Point1F( i ) )
+    if  ( typ == Uniform )
+        for i ∈ 1:n
+            push!( P, Point1F( i ) )
+        end
     end
+    if  ( typ == RandomUniform )
+        vals = [rand()*n + 1.0 for i ∈ 1:n ]
+        sort!( vals )
+        for i ∈ 1:n
+            push!( P, Point1F( vals[ i ] ) )
+        end
+    end
+    
     
     # Generate the upper grid 
     PS = lift_to_2d( P )
 
+   
     printlnf( "Computing WSPD cover..." )
     cover_wspd = WSPD_cover( P, ε )
     printlnf( "Computing 3-approx-cover..." )
@@ -1396,7 +1409,7 @@ function (@main)(ARGS)
 
     if ( length( ARGS ) == 3 )   &&  ( ARGS[1] == "1dim_eps_n" )       
         one_dim_comp_solution( str2num(Float64,ARGS[2]), str2num(Int, ARGS[3] ),
-                               "out/results.csv" )
+                               "out/results.csv", RandomUniform )
         return
     end
 

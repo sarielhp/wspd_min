@@ -1,5 +1,27 @@
 module  WSPD
 
+### The exports...
+
+export WPD
+export WPDPair
+
+export top_delete, top_finalize, top_delete
+export expand, init;
+
+export expand_bichromatic
+
+export top_diam_ub
+export get_top
+export top_refine
+
+export get_reps
+export reps_orig_indexes
+
+export min_orig_index
+export max_orig_index
+export get_orig_ranges
+
+##############################################################
 
 push!(LOAD_PATH, pwd()*"/cg/")
 push!(LOAD_PATH, pwd() )
@@ -308,26 +330,5 @@ function  get_orig_ranges( W::PD{D,T}, pair::WSPair{D,T} ) where {D,T}
     return  l_min:l_max,r_min:r_max
 end
 
-
-### The exports...
-
-export WPD
-export WPDPair
-
-export top_delete, top_finalize, top_delete
-export expand, init;
-
-export expand_bichromatic
-
-export top_diam_ub
-export get_top
-export top_refine
-
-export get_reps
-export reps_orig_indexes
-
-export min_orig_index
-export max_orig_index
-export get_orig_ranges
 
 end
