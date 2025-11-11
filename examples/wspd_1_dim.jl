@@ -952,6 +952,17 @@ function  verify_solution( PS, cover )
 end
 
 
+function  normalize_1_n( _numbers, n )
+    numbers = sort( _numbers )    
+    numbers = numbers .- numbers[1]
+    scale = (n-1) / maximum( numbers ) 
+    numbers = numbers .* scale
+    numbers = numbers .+ 1.0
+
+    return  numbers
+end
+
+
 function generate_n_samples_normal( n::Int )
     if n <= 0
         return Float64[]
@@ -960,46 +971,52 @@ function generate_n_samples_normal( n::Int )
     # 1. Generate n numbers from the normal distribution
     dist = Normal(0.0, 1.0)
     numbers = rand(dist, n)
-    sort!(numbers)
     
-    numbers = numbers .- numbers[1]
-    scale = (n-1) / maximum( numbers ) 
-    numbers = numbers .* scale
-    numbers = numbers .+ 1.0
-    
-    return numbers
+    return normalize_1_n( numbers, n )
 end
 
+function generate_n_numbers_binomial( n::Int, s::Int )
+    if n <= 0
+        return Float64[]
+    end
+    
+    return
+end
 
+function  polygon1d( V::Vector{T} )where{T}
+    V = normalize_1_n( V, length( V ) )
+    P = Polygon1F()
+    for v ∈ V
+        push!( P, Point1F( v ) )
+    end
+    return  P
+end
 
-@enum InputType Uniform RandomUniform RandomNormal
+@enum InputType Uniform RandomUniform RandomNormal ITSquares 
 
 function one_dim_comp_solution( ε, n, filename::String, typ::InputType  )
     n_draw_limit = 81
 
     P = Polygon1F()
     suffix = ""
+    vals = Float64[]
     if  ( typ == Uniform )
-        for i ∈ 1:n
-            push!( P, Point1F( i ) )
-        end
+        vals = [i for i ∈ 1:n]
         suffix = "u"
     end
     if  ( typ == RandomUniform )
-        vals = [rand()*n + 1.0 for i ∈ 1:n ]
-        sort!( vals )
-        for i ∈ 1:n
-            push!( P, Point1F( vals[ i ] ) )
-        end
+        vals = [rand() for i ∈ 1:n ]
         suffix = "urand"
     end
     if  ( typ == RandomNormal )
         vals = generate_n_samples_normal( n )
-        for i ∈ 1:n
-            push!( P, Point1F( vals[ i ] ) )
-        end
         suffix = "normal"
     end
+    if  ( typ == ITSquares )
+        vals = [i*i  for i ∈ 1:n ]
+        suffix = "squares"
+    end
+    P = polygon1d( vals )
     
     
     # Generate the upper grid 
@@ -1441,7 +1458,7 @@ function (@main)(ARGS)
 
     if ( length( ARGS ) == 3 )   &&  ( ARGS[1] == "1dim_eps_n" )       
         one_dim_comp_solution( str2num(Float64,ARGS[2]), str2num(Int, ARGS[3] ),
-                               "results", RandomNormal )
+                               "results", ITSquares )
         return
     end
 
