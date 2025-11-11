@@ -955,12 +955,14 @@ end
 
 function one_dim_comp_solution( ε, n, filename::String, typ::InputType  )
     n_draw_limit = 81
-    
+
     P = Polygon1F()
+    suffix = ""
     if  ( typ == Uniform )
         for i ∈ 1:n
             push!( P, Point1F( i ) )
         end
+        suffix = "u"
     end
     if  ( typ == RandomUniform )
         vals = [rand()*n + 1.0 for i ∈ 1:n ]
@@ -968,6 +970,7 @@ function one_dim_comp_solution( ε, n, filename::String, typ::InputType  )
         for i ∈ 1:n
             push!( P, Point1F( vals[ i ] ) )
         end
+        suffix = "urand"
     end
     
     
@@ -1014,7 +1017,7 @@ function one_dim_comp_solution( ε, n, filename::String, typ::InputType  )
     # Drawing stuff... 
 
     pdf_filename = ( "out/1_dim_" * "n" * string(n) * "_eps_" * replace( string(ε), "." => "_" )
-                 * ".pdf" )
+                 * "_"*suffix*".pdf" )
     c,cr,bb_draw = cairo_setup( pdf_filename, Point2F( n+1, n+1 ) )
     flip_y_axis( cr, n+1 )
 
@@ -1120,13 +1123,14 @@ function one_dim_comp_solution( ε, n, filename::String, typ::InputType  )
         length( cover_3_aprx_c )  # 3-approx-c
     )
 
-    df = df_load( filename )
+    fl = "out/" * filename * "_" * suffix * ".csv" 
+    df = df_load( fl  )
     push!( df, new_row_data )
-    CSV.write( filename, df)
+    CSV.write( fl, df)
 
     printlnf( "\n" )
     printlnf( "Created: ", pdf_filename )
-    printlnf( "Updated: ", filename )
+    printlnf( "Updated: ", fl )
     printlnf( "\n" )    
 end
 
@@ -1409,7 +1413,7 @@ function (@main)(ARGS)
 
     if ( length( ARGS ) == 3 )   &&  ( ARGS[1] == "1dim_eps_n" )       
         one_dim_comp_solution( str2num(Float64,ARGS[2]), str2num(Int, ARGS[3] ),
-                               "out/results.csv", RandomUniform )
+                               "results", RandomUniform )
         return
     end
 
