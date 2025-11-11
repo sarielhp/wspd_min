@@ -1009,9 +1009,9 @@ function one_dim_comp_solution( ε, n, filename::String, typ::InputType  )
     printlnf( "3-approx(c)          : ", length( cover_3_aprx_c ) )
     printlnf( "Greedy               : ", length( cover_greedy ) )
     printlnf( "IP                   : ", length( cover_ip ) )
-    printlnf( "IP (lower bound )    : ", ip_lb )
+    printlnf( "IP (lower bound)     : ", ip_lb )
     printlnf( "IP DJ                : ", length( cover_ip_disjoint ) )
-    printlnf( "IP DJ (lower bound ) : ", ip_lb_disjoint )
+    printlnf( "IP DJ (lower bound)  : ", ip_lb_disjoint )
 
     #####################################################################
     # Drawing stuff... 
