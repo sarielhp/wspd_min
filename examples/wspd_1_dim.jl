@@ -1026,7 +1026,7 @@ function one_dim_comp_solution( ε, n, filename::String, typ::InputType  )
     end
     if  ( typ == ITLOGSQ )
         vals = [(log(i+1)^2)  for i ∈ 1:n ]
-       suffix = "log_s1"
+       suffix = "log_sq"
     end
     P = polygon1d( vals )
     
