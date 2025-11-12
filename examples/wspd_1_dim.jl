@@ -992,7 +992,7 @@ function  polygon1d( V::Vector{T} )where{T}
     return  P
 end
 
-@enum InputType Uniform RandomUniform RandomNormal ITSquares ITLOG 
+@enum InputType Uniform RandomUniform RandomNormal ITSquares ITLOG ITCUBES 
 
 function one_dim_comp_solution( ε, n, filename::String, typ::InputType  )
     n_draw_limit = 81
@@ -1018,7 +1018,11 @@ function one_dim_comp_solution( ε, n, filename::String, typ::InputType  )
     end
     if  ( typ == ITLOG )
         vals = [log(i+1)  for i ∈ 1:n ]
-        suffix = "log"
+       suffix = "log"
+    end
+    if  ( typ == ITCUBES )
+        vals = [i^3  for i ∈ 1:n ]
+       suffix = "cubes"
     end
     P = polygon1d( vals )
     
@@ -1462,7 +1466,7 @@ function (@main)(ARGS)
 
     if ( length( ARGS ) == 3 )   &&  ( ARGS[1] == "1dim_eps_n" )       
         one_dim_comp_solution( str2num(Float64,ARGS[2]), str2num(Int, ARGS[3] ),
-                               "results", ITLOG )
+                               "results", ITCUBES )
         return
     end
 

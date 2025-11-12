@@ -1,0 +1,21 @@
+#! /bin/bash
+
+PDIR=$HOME/papers/25/wspd_min/figs
+DIR=/tmp/sariel/`date_str_dir`/
+mkdir -p $DIR >& /dev/null
+
+FL=$DIR"list.txt"
+
+
+find results/ -type f -iname "*.csv" > $FL
+
+while IFS= read -r line
+do
+  if [ -z "$line" ]; then
+    continue
+  fi
+  TYPE=$(echo "$line" | cut -d'/' -f2)
+  DST=$PDIR/tbl_$TYPE.tex
+  examples/df_2_latex.jl $line $DST
+  #echo $line  
+done < "$FL"
